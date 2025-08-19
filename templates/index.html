@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Media Downloader</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5a6fd8;
+            --secondary-color: #764ba2;
+            --accent-color: #f093fb;
+            --success-color: #4ade80;
+            --error-color: #f87171;
+            --warning-color: #fbbf24;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --bg-light: #f8fafc;
+            --bg-white: #ffffff;
+            --border-color: #e5e7eb;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            font-weight: 400;
+        }
+
+        .platforms {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            flex-wrap: wrap;
+        }
+
+        .platform-icon {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            backdrop-filter: blur(10px);
+            transition: transform 0.2s ease;
+        }
+
+        .platform-icon:hover {
+            transform: scale(1.1);
+        }
+
+        .main-card {
+            background: var(--bg-white);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            background: var(--bg-light);
+            padding: 0.25rem;
+            border-radius: 12px;
+        }
+
+        .tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-light);
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: var(--shadow);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 1rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .radio-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 0.75rem;
+        }
+
+        .radio-option {
+            position: relative;
+        }
+
+        .radio-input {
+            display: none;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .radio-input:checked + .radio-label {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .radio-icon {
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+
+        .radio-text {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .quality-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .quality-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-dark);
+        }
+
+        .quality-btn.active {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .download-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border: none;
+            padding: 1.25rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .download-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .download-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: var(--bg-light);
+            border-radius: 12px;
+        }
+
+        .progress-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+
+        .progress-details h3 {
+            color: var(--text-dark);
+            font-size: 1.2rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .progress-details p {
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .download-ready {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(74, 222, 128, 0.1);
+            border: 2px solid var(--success-color);
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .download-file-btn {
+            background: var(--success-color);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.75rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-file-btn:hover {
+            background: #22c55e;
+            transform: translateY(-1px);
+        }
+
+        .error-message {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(248, 113, 113, 0.1);
+            border: 2px solid var(--error-color);
+            border-radius: 12px;
+            color: var(--error-color);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .ffmpeg-warning {
+            background: rgba(251, 191, 36, 0.1);
+            border: 2px solid var(--warning-color);
+            color: #d97706;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .ffmpeg-warning a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .main-card {
+                padding: 1.5rem;
+            }
+
+            .radio-group {
+                grid-template-columns: 1fr;
+            }
+
+            .quality-group {
+                justify-content: center;
+            }
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .pulse {
+            animation: pulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse {
+            from { opacity: 0.6; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-download"></i> Media Downloader</h1>
+            <p>Download from YouTube, Instagram, TikTok, Twitter & Facebook</p>
+            <div class="platforms">
+                <span class="platform-icon"><i class="fab fa-youtube"></i></span>
+                <span class="platform-icon"><i class="fab fa-instagram"></i></span>
+                <span class="platform-icon"><i class="fab fa-tiktok"></i></span>
+                <span class="platform-icon"><i class="fab fa-twitter"></i></span>
+                <span class="platform-icon"><i class="fab fa-facebook"></i></span>
+            </div>
+        </div>
+
+        <div class="main-card">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('url')">
+                    <i class="fas fa-link"></i> Download from URL
+                </button>
+                <button class="tab" onclick="switchTab('search')">
+                    <i class="fas fa-search"></i> Search & Download
+                </button>
+            </div>
+
+            <div id="url-tab" class="tab-content active">
+                <form id="url-form">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-link"></i> Media URL
+                        </label>
+                        <input type="url" id="media-url" class="form-input" 
+                               placeholder="Paste your media URL here..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-cog"></i> Download Type
+                        </label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="type-best" name="download-type" value="best" class="radio-input" checked>
+                                <label for="type-best" class="radio-label">
+                                    <i class="fas fa-star radio-icon"></i>
+                                    <span class="radio-text">Best Quality</span>
+                                </label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" id="type-video" name="download-type" value="video" class="radio-input">
+                                <label for="type-video" class="radio-label">
+                                    <i class="fas fa-video radio-icon"></i>
+                                    <span class="radio-text">Video Only</span>
+                                </label>
+                            </div>
+                            <div class="radio-option" id="audio-option">
+                                <input type="radio" id="type-audio" name="download-type" value="audio" class="radio-input">
+                                <label for="type-audio" class="radio-label">
+                                    <i class="fas fa-music radio-icon"></i>
+                                    <span class="radio-text">Audio Only</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="quality-group" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-sliders-h"></i> Audio Quality
+                        </label>
+                        <div class="quality-group">
+                            <button type="button" class="quality-btn active" data-quality="128">128K</button>
+                            <button type="button" class="quality-btn" data-quality="192">192K</button>
+                            <button type="button" class="quality-btn" data-quality="320">320K</button>
+                        </div>
+                    </div>
+
+                    <div id="ffmpeg-warning" class="ffmpeg-warning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        FFmpeg not detected - audio extraction may be limited. 
+                        <a href="https://ffmpeg.org/download.html" target="_blank">Download FFmpeg</a>
+                    </div>
+
+                    <button type="submit" class="download-btn" id="url-download-btn">
+                        <i class="fas fa-download"></i> Start Download
+                    </button>
+                </form>
+            </div>
+
+            <div id="search-tab" class="tab-content">
+                <form id="search-form">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-search"></i> Search Query
+                        </label>
+                        <input type="text" id="search-query" class="form-input" 
+                               placeholder="Search for videos on YouTube..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-cog"></i> Download Type
+                        </label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" id="search-type-video" name="search-download-type" value="video" class="radio-input" checked>
+                                <label for="search-type-video" class="radio-label">
+                                    <i class="fas fa-video radio-icon"></i>
+                                    <span class="radio-text">Video</span>
+                                </label>
+                            </div>
+                            <div class="radio-option" id="search-audio-option">
+                                <input type="radio" id="search-type-audio" name="search-download-type" value="audio" class="radio-input">
+                                <label for="search-type-audio" class="radio-label">
+                                    <i class="fas fa-music radio-icon"></i>
+                                    <span class="radio-text">Audio Only</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="search-quality-group" style="display: none;">
+                        <label class="form-label">
+                            <i class="fas fa-sliders-h"></i> Audio Quality
+                        </label>
+                        <div class="quality-group">
+                            <button type="button" class="quality-btn active" data-quality="128">128K</button>
+                            <button type="button" class="quality-btn" data-quality="192">192K</button>
+                            <button type="button" class="quality-btn" data-quality="320">320K</button>
+                        </div>
+                    </div>
+
+                    <div id="search-ffmpeg-warning" class="ffmpeg-warning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        FFmpeg not detected - audio extraction may be limited. 
+                        <a href="https://ffmpeg.org/download.html" target="_blank">Download FFmpeg</a>
+                    </div>
+
+                    <button type="submit" class="download-btn" id="search-download-btn">
+                        <i class="fas fa-search"></i> Search & Download
+                    </button>
+                </form>
+            </div>
+
+            <div class="progress-container" id="progress-container">
+                <div class="progress-info">
+                    <div class="progress-icon">
+                        <i class="fas fa-download pulse"></i>
+                    </div>
+                    <div class="progress-details">
+                        <h3 id="progress-title">Preparing download...</h3>
+                        <p id="progress-subtitle">Please wait while we process your request</p>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <div class="progress-text" id="progress-text">0%</div>
+            </div>
+
+            <div class="download-ready" id="download-ready">
+                <i class="fas fa-check-circle" style="color: var(--success-color); font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                <h3 style="color: var(--success-color); margin-bottom: 0.5rem;">Download Complete!</h3>
+                <p style="color: var(--text-light); margin-bottom: 1rem;">Your file is ready for download</p>
+                <button class="download-file-btn" id="download-file-btn">
+                    <i class="fas fa-download"></i> Download File
+                </button>
+            </div>
+
+            <div class="error-message" id="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span id="error-text">Something went wrong. Please try again.</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDownloadId = null;
+        let statusCheckInterval = null;
+        let selectedQuality = '192';
+        let selectedSearchQuality = '192';
+        let ffmpegAvailable = false;
+
+        // Check FFmpeg availability on page load
+        checkFFmpeg();
+
+        async function checkFFmpeg() {
+            try {
+                const response = await fetch('/api/check-ffmpeg');
+                const data = await response.json();
+                ffmpegAvailable = data.ffmpeg_available;
+                
+                if (!ffmpegAvailable) {
+                    document.getElementById('ffmpeg-warning').style.display = 'block';
+                    document.getElementById('search-ffmpeg-warning').style.display = 'block';
+                    // Disable audio options
+                    document.getElementById('audio-option').style.opacity = '0.5';
+                    document.getElementById('search-audio-option').style.opacity = '0.5';
+                    document.getElementById('type-audio').disabled = true;
+                    document.getElementById('search-type-audio').disabled = true;
+                }
+            } catch (error) {
+                console.error('Error checking FFmpeg:', error);
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Reset forms and hide progress/results
+            resetUI();
+        }
+
+        function resetUI() {
+            // Hide progress and results
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('download-ready').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+            
+            // Reset buttons
+            document.getElementById('url-download-btn').disabled = false;
+            document.getElementById('search-download-btn').disabled = false;
+            
+            // Clear status check
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+            
+            currentDownloadId = null;
+        }
+
+        // Quality button handlers
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const group = this.closest('.quality-group');
+                group.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Update selected quality based on which group
+                if (group.closest('#quality-group')) {
+                    selectedQuality = this.dataset.quality;
+                } else {
+                    selectedSearchQuality = this.dataset.quality;
+                }
+            });
+        });
+
+        // Show/hide quality options based on download type
+        document.querySelectorAll('input[name="download-type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const qualityGroup = document.getElementById('quality-group');
+                if (this.value === 'audio' && ffmpegAvailable) {
+                    qualityGroup.style.display = 'block';
+                } else {
+                    qualityGroup.style.display = 'none';
+                }
+            });
+        });
+
+        document.querySelectorAll('input[name="search-download-type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const qualityGroup = document.getElementById('search-quality-group');
+                if (this.value === 'audio' && ffmpegAvailable) {
+                    qualityGroup.style.display = 'block';
+                } else {
+                    qualityGroup.style.display = 'none';
+                }
+            });
+        });
+
+        // Form submission handlers
+        document.getElementById('url-form').addEventListener('submit', handleUrlDownload);
+        document.getElementById('search-form').addEventListener('submit', handleSearchDownload);
+
+        async function handleUrlDownload(e) {
+            e.preventDefault();
+            
+            const url = document.getElementById('media-url').value.trim();
+            const type = document.querySelector('input[name="download-type"]:checked').value;
+            const quality = type === 'audio' ? selectedQuality : '192';
+            
+            if (!url) {
+                showError('Please enter a valid URL');
+                return;
+            }
+            
+            startDownload('/api/download', {
+                url: url,
+                type: type,
+                quality: quality
+            });
+        }
+
+        async function handleSearchDownload(e) {
+            e.preventDefault();
+            
+            const query = document.getElementById('search-query').value.trim();
+            const type = document.querySelector('input[name="search-download-type"]:checked').value;
+            const quality = type === 'audio' ? selectedSearchQuality : '192';
+            
+            if (!query) {
+                showError('Please enter a search query');
+                return;
+            }
+            
+            startDownload('/api/search', {
+                query: query,
+                type: type,
+                quality: quality
+            });
+        }
+
+        async function startDownload(endpoint, data) {
+            resetUI();
+            
+            // Disable buttons and show progress
+            document.getElementById('url-download-btn').disabled = true;
+            document.getElementById('search-download-btn').disabled = true;
+            document.getElementById('progress-container').style.display = 'block';
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Download failed');
+                }
+                
+                currentDownloadId = result.download_id;
+                updateProgressInfo(result.platform);
+                
+                // Start checking status
+                statusCheckInterval = setInterval(checkDownloadStatus, 1000);
+                
+            } catch (error) {
+                showError(error.message);
+                document.getElementById('url-download-btn').disabled = false;
+                document.getElementById('search-download-btn').disabled = false;
+            }
+        }
+
+        function updateProgressInfo(platform) {
+            const platformNames = {
+                'youtube': 'YouTube',
+                'instagram': 'Instagram',
+                'tiktok': 'TikTok',
+                'twitter': 'Twitter',
+                'facebook': 'Facebook'
+            };
+            
+            const platformName = platformNames[platform] || platform.toUpperCase();
+            document.getElementById('progress-title').textContent = `Downloading from ${platformName}`;
+            document.getElementById('progress-subtitle').textContent = 'Processing your request...';
+        }
+
+        async function checkDownloadStatus() {
+            if (!currentDownloadId) return;
+            
+            try {
+                const response = await fetch(`/api/status/${currentDownloadId}`);
+                const status = await response.json();
+                
+                if (status.status === 'not_found') {
+                    showError('Download session not found');
+                    clearInterval(statusCheckInterval);
+                    return;
+                }
+                
+                // Update progress
+                const progress = status.progress || 0;
+                document.getElementById('progress-fill').style.width = `${progress}%`;
+                document.getElementById('progress-text').textContent = `${progress}%`;
+                
+                // Update status text
+                if (status.message) {
+                    document.getElementById('progress-subtitle').textContent = status.message;
+                }
+                
+                // Update title with media info
+                if (status.title) {
+                    document.getElementById('progress-title').textContent = status.title;
+                }
+                
+                if (status.status === 'completed') {
+                    clearInterval(statusCheckInterval);
+                    showDownloadReady();
+                } else if (status.status === 'error') {
+                    clearInterval(statusCheckInterval);
+                    showError(status.message || 'Download failed');
+                }
+                
+            } catch (error) {
+                console.error('Error checking status:', error);
+                clearInterval(statusCheckInterval);
+                showError('Failed to check download status');
+            }
+        }
+
+        function showDownloadReady() {
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('download-ready').style.display = 'block';
+            
+            // Set up download file button
+            document.getElementById('download-file-btn').onclick = function() {
+                if (currentDownloadId) {
+                    window.location.href = `/api/download-file/${currentDownloadId}`;
+                    // Reset UI after a delay
+                    setTimeout(() => {
+                        resetUI();
+                        document.getElementById('url-download-btn').disabled = false;
+                        document.getElementById('search-download-btn').disabled = false;
+                    }, 2000);
+                }
+            };
+        }
+
+        function showError(message) {
+            document.getElementById('progress-container').style.display = 'none';
+            document.getElementById('download-ready').style.display = 'none';
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('error-text').textContent = message;
+            
+            // Re-enable buttons
+            document.getElementById('url-download-btn').disabled = false;
+            document.getElementById('search-download-btn').disabled = false;
+        }
+    </script>
+</body>
+</html>
