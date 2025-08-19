@@ -16,6 +16,9 @@ app.config['SECRET_KEY'] = 'your-secret-key-here'
 # Global variable to store download status
 download_status = {}
 
+# Cookies file path
+COOKIES_FILE = 'cookies.txt'
+
 def install_required_packages():
     """Install required packages if not available"""
     packages = ['yt-dlp', 'requests']
@@ -33,6 +36,17 @@ def check_ffmpeg():
         return result.returncode == 0
     except FileNotFoundError:
         return False
+
+def check_cookies_file():
+    """Check if cookies file exists and is readable"""
+    if os.path.exists(COOKIES_FILE):
+        try:
+            with open(COOKIES_FILE, 'r') as f:
+                content = f.read().strip()
+                return len(content) > 0
+        except Exception:
+            return False
+    return False
 
 def detect_platform(url):
     """Detect which platform the URL belongs to"""
@@ -82,6 +96,42 @@ def detect_platform(url):
     
     return 'unknown'
 
+def get_ydl_opts_with_cookies(temp_dir, platform):
+    """Get yt-dlp options with cookies configuration"""
+    ydl_opts = {
+        'writeinfojson': False,
+        'writethumbnail': False,
+    }
+    
+    # Add cookies if available
+    if check_cookies_file():
+        ydl_opts['cookiefile'] = COOKIES_FILE
+        print(f"Using cookies file: {COOKIES_FILE}")
+    
+    # Platform-specific filename templates
+    if platform == 'youtube':
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / 'YT_%(title)s_%(id)s.%(ext)s')
+    elif platform == 'instagram':
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / 'IG_%(uploader)s_%(title)s_%(id)s.%(ext)s')
+    elif platform == 'tiktok':
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / 'TT_%(uploader)s_%(title)s_%(id)s.%(ext)s')
+    elif platform == 'twitter':
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / 'TW_%(uploader)s_%(title)s_%(id)s.%(ext)s')
+    elif platform == 'facebook':
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / 'FB_%(uploader)s_%(title)s_%(id)s.%(ext)s')
+    else:
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / '%(uploader)s_%(title)s_%(id)s.%(ext)s')
+    
+    # Additional options to avoid bot detection
+    ydl_opts.update({
+        'sleep_interval': 1,  # Sleep between downloads
+        'max_sleep_interval': 5,  # Random sleep up to 5 seconds
+        'sleep_interval_requests': 1,  # Sleep between requests
+        'sleep_interval_subtitles': 1,  # Sleep between subtitle requests
+    })
+    
+    return ydl_opts
+
 def download_media_async(download_id, url, platform, download_type, quality='192'):
     """Download media asynchronously"""
     try:
@@ -91,31 +141,15 @@ def download_media_async(download_id, url, platform, download_type, quality='192
             'status': 'downloading',
             'progress': 0,
             'message': 'Starting download...',
-            'filename': None
+            'filename': None,
+            'cookies_used': check_cookies_file()
         }
         
         # Create temporary download folder
         temp_dir = tempfile.mkdtemp()
         
-        # Base configuration
-        ydl_opts = {
-            'writeinfojson': False,
-            'writethumbnail': False,
-        }
-        
-        # Platform-specific filename templates
-        if platform == 'youtube':
-            ydl_opts['outtmpl'] = str(Path(temp_dir) / 'YT_%(title)s_%(id)s.%(ext)s')
-        elif platform == 'instagram':
-            ydl_opts['outtmpl'] = str(Path(temp_dir) / 'IG_%(uploader)s_%(title)s_%(id)s.%(ext)s')
-        elif platform == 'tiktok':
-            ydl_opts['outtmpl'] = str(Path(temp_dir) / 'TT_%(uploader)s_%(title)s_%(id)s.%(ext)s')
-        elif platform == 'twitter':
-            ydl_opts['outtmpl'] = str(Path(temp_dir) / 'TW_%(uploader)s_%(title)s_%(id)s.%(ext)s')
-        elif platform == 'facebook':
-            ydl_opts['outtmpl'] = str(Path(temp_dir) / 'FB_%(uploader)s_%(title)s_%(id)s.%(ext)s')
-        else:
-            ydl_opts['outtmpl'] = str(Path(temp_dir) / '%(uploader)s_%(title)s_%(id)s.%(ext)s')
+        # Get base configuration with cookies
+        ydl_opts = get_ydl_opts_with_cookies(temp_dir, platform)
         
         # Progress hook
         def progress_hook(d):
@@ -124,12 +158,16 @@ def download_media_async(download_id, url, platform, download_type, quality='192
                     percent = (d['downloaded_bytes'] / d['total_bytes']) * 100
                     download_status[download_id]['progress'] = int(percent)
                     download_status[download_id]['message'] = f'Downloading... {percent:.1f}%'
+                elif 'downloaded_bytes' in d:
+                    download_status[download_id]['message'] = f'Downloading... {d["downloaded_bytes"]} bytes'
                 else:
                     download_status[download_id]['message'] = 'Downloading...'
             elif d['status'] == 'finished':
                 download_status[download_id]['progress'] = 100
-                download_status[download_id]['message'] = 'Download completed!'
+                download_status[download_id]['message'] = 'Processing...'
                 download_status[download_id]['filename'] = d['filename']
+            elif d['status'] == 'error':
+                download_status[download_id]['message'] = f'Error: {d.get("error", "Unknown error")}'
         
         ydl_opts['progress_hooks'] = [progress_hook]
         
@@ -153,6 +191,7 @@ def download_media_async(download_id, url, platform, download_type, quality='192
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # Get media info first
+            download_status[download_id]['message'] = 'Extracting media info...'
             info = ydl.extract_info(url, download=False)
             title = info.get('title', 'Unknown')
             uploader = info.get('uploader', 'Unknown')
@@ -160,6 +199,7 @@ def download_media_async(download_id, url, platform, download_type, quality='192
             download_status[download_id]['title'] = title
             download_status[download_id]['uploader'] = uploader
             download_status[download_id]['platform'] = platform
+            download_status[download_id]['message'] = 'Starting download...'
             
             # Download the media
             ydl.download([url])
@@ -168,7 +208,7 @@ def download_media_async(download_id, url, platform, download_type, quality='192
             files = list(Path(temp_dir).glob('*'))
             if files:
                 # Get the main media file (not .info.json)
-                media_files = [f for f in files if not f.name.endswith('.info.json')]
+                media_files = [f for f in files if not f.name.endswith('.info.json') and not f.name.endswith('.part')]
                 if media_files:
                     download_status[download_id]['filename'] = str(media_files[0])
                     download_status[download_id]['temp_dir'] = temp_dir
@@ -180,6 +220,7 @@ def download_media_async(download_id, url, platform, download_type, quality='192
     except Exception as e:
         download_status[download_id]['status'] = 'error'
         download_status[download_id]['message'] = f'Download failed: {str(e)}'
+        print(f"Download error for {download_id}: {str(e)}")
 
 def search_and_download_async(download_id, query, download_type, quality='192'):
     """Search and download asynchronously"""
@@ -190,15 +231,15 @@ def search_and_download_async(download_id, query, download_type, quality='192'):
             'status': 'searching',
             'progress': 0,
             'message': 'Searching...',
-            'filename': None
+            'filename': None,
+            'cookies_used': check_cookies_file()
         }
         
         temp_dir = tempfile.mkdtemp()
         
-        ydl_opts = {
-            'outtmpl': str(Path(temp_dir) / 'YT_SEARCH_%(title)s_%(id)s.%(ext)s'),
-            'writeinfojson': False,
-        }
+        # Get base configuration with cookies
+        ydl_opts = get_ydl_opts_with_cookies(temp_dir, 'youtube')
+        ydl_opts['outtmpl'] = str(Path(temp_dir) / 'YT_SEARCH_%(title)s_%(id)s.%(ext)s')
         
         def progress_hook(d):
             if d['status'] == 'downloading':
@@ -206,11 +247,13 @@ def search_and_download_async(download_id, query, download_type, quality='192'):
                     percent = (d['downloaded_bytes'] / d['total_bytes']) * 100
                     download_status[download_id]['progress'] = int(percent)
                     download_status[download_id]['message'] = f'Downloading... {percent:.1f}%'
+                elif 'downloaded_bytes' in d:
+                    download_status[download_id]['message'] = f'Downloading... {d["downloaded_bytes"]} bytes'
                 else:
                     download_status[download_id]['message'] = 'Downloading...'
             elif d['status'] == 'finished':
                 download_status[download_id]['progress'] = 100
-                download_status[download_id]['message'] = 'Download completed!'
+                download_status[download_id]['message'] = 'Processing...'
                 download_status[download_id]['filename'] = d['filename']
         
         ydl_opts['progress_hooks'] = [progress_hook]
@@ -251,7 +294,7 @@ def search_and_download_async(download_id, query, download_type, quality='192'):
                 # Find the downloaded file
                 files = list(Path(temp_dir).glob('*'))
                 if files:
-                    media_files = [f for f in files if not f.name.endswith('.info.json')]
+                    media_files = [f for f in files if not f.name.endswith('.info.json') and not f.name.endswith('.part')]
                     if media_files:
                         download_status[download_id]['filename'] = str(media_files[0])
                         download_status[download_id]['temp_dir'] = temp_dir
@@ -266,6 +309,7 @@ def search_and_download_async(download_id, query, download_type, quality='192'):
     except Exception as e:
         download_status[download_id]['status'] = 'error'
         download_status[download_id]['message'] = f'Search failed: {str(e)}'
+        print(f"Search error for {download_id}: {str(e)}")
 
 @app.route('/')
 def index():
@@ -296,7 +340,11 @@ def api_download():
     thread.daemon = True
     thread.start()
     
-    return jsonify({'download_id': download_id, 'platform': platform})
+    return jsonify({
+        'download_id': download_id, 
+        'platform': platform,
+        'cookies_available': check_cookies_file()
+    })
 
 @app.route('/api/search', methods=['POST'])
 def api_search():
@@ -319,7 +367,11 @@ def api_search():
     thread.daemon = True
     thread.start()
     
-    return jsonify({'download_id': download_id, 'platform': 'youtube'})
+    return jsonify({
+        'download_id': download_id, 
+        'platform': 'youtube',
+        'cookies_available': check_cookies_file()
+    })
 
 @app.route('/api/status/<download_id>')
 def api_status(download_id):
@@ -357,7 +409,34 @@ def api_download_file(download_id):
 def api_check_ffmpeg():
     return jsonify({'ffmpeg_available': check_ffmpeg()})
 
+@app.route('/api/check-cookies')
+def api_check_cookies():
+    cookies_available = check_cookies_file()
+    return jsonify({
+        'cookies_available': cookies_available,
+        'cookies_file': COOKIES_FILE,
+        'message': 'Cookies loaded successfully' if cookies_available else 'No cookies file found or empty'
+    })
+
+@app.route('/api/system-status')
+def api_system_status():
+    return jsonify({
+        'ffmpeg_available': check_ffmpeg(),
+        'cookies_available': check_cookies_file(),
+        'cookies_file': COOKIES_FILE
+    })
+
 if __name__ == '__main__':
+    # Check system requirements on startup
+    print("Checking system requirements...")
+    print(f"FFmpeg available: {check_ffmpeg()}")
+    print(f"Cookies file available: {check_cookies_file()}")
+    if check_cookies_file():
+        print(f"Using cookies from: {COOKIES_FILE}")
+    else:
+        print(f"No cookies file found at: {COOKIES_FILE}")
+        print("Consider adding cookies.txt file to avoid bot detection")
+    
     # Install required packages on startup
     install_required_packages()
     app.run(debug=True, host='0.0.0.0', port=8000)
