@@ -360,4 +360,4 @@ def api_check_ffmpeg():
 if __name__ == '__main__':
     # Install required packages on startup
     install_required_packages()
-    app.run(debug=True, host='0.0.0.0', port=6000)
+    app.run(debug=True, host='0.0.0.0', port=8000)
